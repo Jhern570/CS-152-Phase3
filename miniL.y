@@ -116,33 +116,33 @@ Declaration: 	Declarations SEMICOLON Declaration
 Declarations: 	Identifier COLON Declare-Type
 		;
 
-Declare-Type:	INTEGER { printf("Declare-Type -> INTEGER\n"); }
+Declare-Type:	INTEGER {  }
 		| ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER 
-		{ printf("Declaration -> ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER\n"); }
+		{ }
 		;
 
 
-Statement:	Statements SEMICOLON Statement { printf("Statement -> Statements SEMICOLON Statement\n"); }
-		| /* empty */ { printf("Statement -> epsilon\n"); }
+Statement:	Statements SEMICOLON Statement { }
+		| /* empty */ {  }
 		;
 
-Statements:	Var ASSIGN Expression {printf("Statement -> Var ASSIGN Expression\n"); }
-		| IF BoolExp THEN Statement Else-State ENDIF { printf("Statement -> IF BoolExp THEN Statement Else-State ENDIF\n"); }
-		| WHILE BoolExp BEGINLOOP Statement ENDLOOP { printf("Statement -> WHILE BoolExp BEGINLOOP Statement ENDLOOP\n"); }
-		| DO BEGINLOOP Statement ENDLOOP WHILE BoolExp { printf("Statement -> DO BEGINLOOP Statement ENDLOOP WHILE BoolExp\n"); }
-		| READ Var { printf("Statement -> READ Var\n"); }
-		| WRITE Var { printf("Statement -> WRITE Var\n"); }
-		| CONTINUE { printf("Statement -> CONTINUE\n"); }
-		| BREAK { printf("Statement -> BREAK\n"); }
-		| RETURN Expression { printf("Statement -> RETURN Expression\n"); }
+Statements:	Var ASSIGN Expression {}
+		| IF BoolExp THEN Statement Else-State ENDIF {}
+		| WHILE BoolExp BEGINLOOP Statement ENDLOOP {}
+		| DO BEGINLOOP Statement ENDLOOP WHILE BoolExp {}
+		| READ Var {}
+		| WRITE Var {}
+		| CONTINUE { }
+		| BREAK { }
+		| RETURN Expression {}
 		;
 
-Else-State:	ELSE Statement { printf("Else-State -> ELSE Statement\n"); }
-		| /* empty */ { printf("Else-State -> epsilon\n"); }
+Else-State:	ELSE Statement {}
+		| /* empty */ {}
 		;	
 
-BoolExp: 	NOT BoolExp { printf("BoolExp -> NOT BoolExp\n"); }
-		| Expression Comp Expression { printf("BoolExp -> Expression Comp Expression\n"); }
+BoolExp: 	NOT BoolExp {}
+		| Expression Comp Expression {}
 		;
 
 Comp: 		EQ { printf("Comp -> EQ\n"); }
@@ -153,44 +153,44 @@ Comp: 		EQ { printf("Comp -> EQ\n"); }
 		| GTE { printf("Comp -> GTE\n"); }
 		;
 
-Expression: 	MultExp Exp { printf("Expression -> MultExp Exp\n"); }
+Expression: 	MultExp Exp {}
 		;
 
-Exp:		addOp MultExp { printf("Exp -> addOp MultExp\n"); }
-		| /* empty */ { printf("Exp -> epsilon\n"); }
+Exp:		addOp MultExp {}
+		| /* empty */ {}
 		;
 
-addOp:		ADD { printf("addOp -> ADD\n"); }
-		| SUB { printf("addOp -> SUB\n"); }
+addOp:		ADD {}
+		| SUB {}
 		;
 
-MultExp: 	Term  Exp-Mult { printf("MultExp -> Term Exp-Mult\n"); }
+MultExp: 	Term  Exp-Mult {}
 		;
 
-Exp-Mult:	multOp Term { printf("Exp-Mult -> multOp Term\n"); }
-		| /* empty */ { printf("Exp-Mult -> epsilon\n"); }
+Exp-Mult:	multOp Term {}
+		| /* empty */ {}
 		;
 
-multOp:		MULT { printf("multOp -> MULT\n"); }
-		| DIV { printf("multOp -> DIV\n"); }
-		| MOD { printf("multOp -> MOD\n"); }
+multOp:		MULT {}
+		| DIV {}
+		| MOD {}
 		;
 
-Term: 		Var { printf("Term -> Var\n"); }
-		| NUMBER { printf("Term -> NUMBER %d\n", $1); }
-		| L_PAREN Expression R_PAREN { printf("Term -> L_PAREN EXPRESSINO R_PAREN\n"); }
-		| Identifier L_PAREN Exp-Paren R_PAREN { printf("Term -> IDENT L-PAREN Exp-Paren R_PAREN\n"); } 
+Term: 		Var {}
+		| NUMBER {}
+		| L_PAREN Expression R_PAREN {}
+		| Identifier L_PAREN Exp-Paren R_PAREN {} 
 		;
 
-Exp-Paren: 	Expression Exp-Comma { printf("Exp-Paren -> Expression Exp-Paren\n"); }
+Exp-Paren: 	Expression Exp-Comma {}
 		;
 
-Exp-Comma:	COMMA Exp-Paren { printf("Exp-Comma -> COMMA Exp-Paren\n"); }
-		| /* empty */ { printf("Exp-Comma -> epsilon\:wn"); }
+Exp-Comma:	COMMA Exp-Paren { }
+		| /* empty */ { }
 		; 
 
-Var: 		Identifier { printf("Var -> Identifier\n"); }
-		| Identifier L_SQUARE_BRACKET Expression  R_SQUARE_BRACKET { printf("Var -> Identifier L_SQUARE_BRACKET Expression R_SQUARE_BRACKET\n"); }
+Var: 		Identifier {}
+		| Identifier L_SQUARE_BRACKET Expression  R_SQUARE_BRACKET {}
 		;
 
 Identifier: 	IDENT {
