@@ -21,7 +21,7 @@ SUB	[-]
 ADD	[+]
 MULT	[*]
 DIV	[/]
-MOD	[MOD]
+MOD	[%]
 EQ	{equal}{equal}
 LT	[<]
 GT	[>]

@@ -103,7 +103,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 85 "miniL.y" /* yacc.c:1909  */
+#line 86 "miniL.y" /* yacc.c:1909  */
 
   /* put your types here */
 	int num;

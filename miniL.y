@@ -32,10 +32,11 @@ std::vector<int>temp_value;
 string create_temp();
 
 enum Types { Integer, Array };
+
 struct Symbols{
 	std::string name;
 	Types type;
-}
+};
 
 struct Functions{
 	std::string name;
@@ -162,15 +163,16 @@ Funct:		FUNCTION Identifier {
 		{
 	        	CodeNode* node = new CodeNode;
 			
-			node->code += $5->code + $8->code + $11->code + "endfunc\n\n";
+			node->code += $6->code + $9->code + $12->code + "endfunc\n\n";
 			
 			cout << node->code;
+			
 		}
 		;
 
 Declaration: 	Declarations SEMICOLON Declaration{
 			CodeNode* node = new CodeNode;
-			node->code += $1->code;
+			node->code += $1->code + $3->code;
 			$$ = node;
 		} 
 		| /* empty */ {
@@ -183,7 +185,7 @@ Declarations: 	Identifier COLON INTEGER {
 			CodeNode*  node = new CodeNode;
 			node->name = $1->name;
 			node->code += ". " + $1->name + "\n";
-			addSymbol($1->name, Integer);
+			/*addSymbol($1->name, Integer);*/
 			$$ = node;
 			
 		} 
@@ -195,7 +197,7 @@ Declarations: 	Identifier COLON INTEGER {
 Statement:	Statements SEMICOLON Statement {
 			CodeNode* node = new CodeNode;
 			
-			node->code += $1->code;
+			node->code += $1->code + $3->code;
 			$$ = node;
 		}
 		| /* empty */ {
@@ -207,9 +209,9 @@ Statement:	Statements SEMICOLON Statement {
 Statements:	Var ASSIGN Expression {
 			string var = $1->name;
 			
-			if(!find(var)){
+			/*if(!find(var)){
 				cout << "Error. Variable not declared" << endl;
-			}
+			}*/
 
 			CodeNode* node = new CodeNode;
 			
@@ -227,7 +229,7 @@ Statements:	Var ASSIGN Expression {
 				node->code += "= ";
 			} 
 
-			node->code += $1-name + ", " + temp + "\n";
+			node->code += $1->name + ", " + temp + "\n";
 			
 			$$ = node;
 				 				
@@ -240,7 +242,7 @@ Statements:	Var ASSIGN Expression {
 		| READ Var {}
 		| WRITE Var {
 			CodeNode* node = new CodeNode;
-			code->code += $2->code + ". >" + $2->name << "\n";
+			node->code += $2->code + ".> " + $2->name + "\n";
 			$$ = node;  
 		}
 		| CONTINUE { }
@@ -275,12 +277,19 @@ Expression: 	MultExp {
 			CodeNode* node = new CodeNode;
 
 			node->name = strdup(temp.c_str());
-			node->code += $1->code + $3->code + ". " + node->name + "\n" + "+ " + $1->name + $3->name + "\n";
+			node->code += $1->code + $3->code + ". " + node->name + "\n" + "+ " + temp + ", " + $1->name + ", "+ $3->name + "\n";
 			$$ = node;  
 			
 
 		}
-		| MultExp SUB Expression 
+		| MultExp SUB Expression{
+			string temp = create_temp();
+                        CodeNode* node = new CodeNode;
+
+                        node->name = strdup(temp.c_str());
+                        node->code += $1->code + $3->code + ". " + node->name + "\n" + "- " + temp + ", " + $1->name + ", "+ $3->name + "\n";
+                        $$ = node;
+		} 
 		;
 
 /*addOp:		ADD {
@@ -294,19 +303,32 @@ MultExp: 	Term {
 			$$ = $1;
 		 	
 		} 
-		| Term MULT MultExp { }
-		| Term DIV MultExp { }
-		| Term MOD MultExp { }
+		| Term MULT MultExp {
+			string temp = create_temp();
+                        CodeNode* node = new CodeNode;
+
+                        node->name = strdup(temp.c_str());
+                        node->code += $1->code + $3->code + ". " + node->name + "\n" + "* " + temp + ", " + $1->name + ", "+ $3->name + "\n";
+                        $$ = node;
+		}
+		| Term DIV MultExp { 
+			string temp = create_temp();
+                        CodeNode* node = new CodeNode;
+
+                        node->name = strdup(temp.c_str());
+                        node->code += $1->code + $3->code + ". " + node->name + "\n" + "/ " + temp + ", " + $1->name + ", "+ $3->name + "\n";
+                        $$ = node;
+		}
+		| Term MOD MultExp {
+			string temp = create_temp();
+                        CodeNode* node = new CodeNode;
+
+                        node->name = strdup(temp.c_str());
+                        node->code += $1->code + $3->code + ". " + node->name + "\n" + "% " + temp + ", " + $1->name + ", "+ $3->name + "\n";
+                        $$ = node;
+		}
 		;
 
-/*Exp-Mult:	multOp Term {  }
-		| /* empty  { }
-		;
-
-multOp:		MULT {  }
-		| DIV {  }
-		| MOD {  }
-		;*/
 
 		
 Term: 		Var {
@@ -315,10 +337,6 @@ Term: 		Var {
 		| NUMBER {
 			CodeNode* node = new CodeNode;
                         std::string str = to_string($1);
-			/*const char* c = str.c_str();
-			char* ch;
-			ch = strdup(c);
-			$$ = ch;*/
 			node->name = str;
 			node->code = "";
 			$$ = node;
