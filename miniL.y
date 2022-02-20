@@ -190,7 +190,9 @@ Declarations: 	Identifier COLON INTEGER {
 			
 		} 
 		| Identifier COLON ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER{
-			cout << ".[] " << $1->name << ", " << $5 << endl;			
+			   CodeNode* node = new CodeNode;
+   			   node->code += ".[] " + $1->name + ", " + to_string($5) + "\n";
+   			   $$ = node; 			
 		}	
 		;
 
@@ -217,19 +219,22 @@ Statements:	Var ASSIGN Expression {
 			
 			node->code = $1->code + $3->code;
 			
-			string temp = $3->name;
+			
 
 			if($1->arr && $3->arr){
+				
 			}
 			else if($1->arr){
+				node->code += "[]= ";
 			}
 			else if($3->arr){
+				node->code += "[]= ";
 			}
 			else{
 				node->code += "= ";
 			} 
 
-			node->code += $1->name + ", " + temp + "\n";
+			node->code += $1->name + ", " + $3->name + "\n";
 			
 			$$ = node;
 				 				
@@ -353,9 +358,18 @@ Exp-Comma:	COMMA Exp-Paren { }
 		; 
 
 Var: 		Identifier {
-			$$ = $1;
+			CodeNode* node = new CodeNode;
+			node->name = $1->name;
+			node->code = "";
+			$$ = node;
 		}
-		| Identifier L_SQUARE_BRACKET Expression  R_SQUARE_BRACKET { }
+		| Identifier L_SQUARE_BRACKET Expression  R_SQUARE_BRACKET {
+			CodeNode* node = new CodeNode;
+			node->name = $1->name +", "+$3->name;
+			node->code = $3->code;
+			node->arr = 1;
+			$$ = node;	
+ 		}
 		;
 
 Identifier: 	IDENT {

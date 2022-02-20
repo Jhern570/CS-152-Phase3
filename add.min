@@ -6,6 +6,8 @@ beginlocals
   a : integer;
   b : integer;
   c : integer;
+  d : array [20] of integer;
+  e : integer;
 
 endlocals
 
@@ -14,6 +16,7 @@ beginbody
   a := 100;
   b :=  50;
   c := a + b;
+  e[0] := a + c;
   write c;
 
 endbody
