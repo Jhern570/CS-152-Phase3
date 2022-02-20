@@ -1,34 +1,92 @@
 /* cs152-miniL phase3 */
 %{
 #define YY_NO_INPUT
-#include<stdio.h>
-#include<stdlib.h>
-#include<iostream>
-#include<fstream>
-#include<string>
-#include<stack>
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fstream>
+#include <string>
+#include <cstring>
+#include <stack>
+#include <vector>
+
 using namespace std;
 
 extern int yylex();
 extern int yyparse();
-extern FILE* yyin;
+extern FILE *yyin;
 
-void yyerror(const char *msg);
+int yyerror(const char *msg);
+	
+int temp_counter = 0;
+
+std::vector<string>funct_;
+std::vector<string>param_;
+std::vector<string>var_;
+std::vector<string>type_;
+std::vector<string>temp_;
+std::vector<int>temp_value;
+
+
+string create_temp();
+
+enum Types { Integer, Array };
+struct Symbols{
+	std::string name;
+	Types type;
+}
+
+struct Functions{
+	std::string name;
+        vector<Symbols> decla;
+};
+
+std::vector<Functions>symbol_table;
+
+Functions getFunction(){
+	int last = symbol_table.size() - 1;
+       	return symbol_table.at(last);
+}
+
+bool find(std::string str){
+	Functions funct = getFunction();
+        for(vector<Symbols>::iterator it = funct.decla.begin(); it != funct.decla.end(); it++){
+        	Symbols s = *it;
+                if(s.name == str){
+                	return true;
+                }
+         }
+         return false;
+}
+
+void addFunction(std::string str){
+	Functions f;
+        f.name = str;
+        symbol_table.push_back(f);
+}
+
+void addSymbol(std::string str, Types t){
+ 	Symbols s;
+        s.name = str;
+        s.type = t;
+        Functions f = getFunction();
+        f.decla.push_back(s);
+ }
+
+struct CodeNode{
+	string name;
+	string code;
+	bool arr;
+};	
 %}
+
 
 %union{
   /* put your types here */
 	int num;
-	char* id;
-
-	bool param_flag = false;
-	bool local_flag = false;
-
-
-	vector<string>funct_;
-	vector<string>param_;
-	vector<string>var_;
-	vector<string>type_;
+	char *id;
+	struct CodeNode* code_node;			
 }
 
 %error-verbose
@@ -86,7 +144,8 @@ void yyerror(const char *msg);
 %token L_SQUARE_BRACKET
 %token R_SQUARE_BRACKET
 %token ASSIGN
-%token equal
+%type<code_node> Identifier Var Term MultExp Statements Expression Statement Declarations Declaration 
+
 %% 
 
   /* write your rules here */
@@ -97,111 +156,197 @@ Functions:	Funct Functions { }
 		;
 
 Funct:		FUNCTION Identifier {
-			string func_name = $2;
-			fuct_.push_back(func_name);
-			cout << "func " << func_name << endl;					 	
+			cout << "func " << $2->name << endl;					 	
 		}
-		SEMICOLON BEGIN_PARAMS{
-			param_flag = true;
-		}
-		Declaration END_PARAMS BEGIN_LOCALS Declaration END_LOCALS BEGIN_BODY Statement END_BODY {
-	        		
+		SEMICOLON BEGIN_PARAMS Declaration END_PARAMS BEGIN_LOCALS Declaration END_LOCALS BEGIN_BODY Statement END_BODY 
+		{
+	        	CodeNode* node = new CodeNode;
+			
+			node->code += $5->code + $8->code + $11->code + "endfunc\n\n";
+			
+			cout << node->code;
 		}
 		;
 
-Declaration: 	Declarations SEMICOLON Declaration 
-		| /* empty */ { }
+Declaration: 	Declarations SEMICOLON Declaration{
+			CodeNode* node = new CodeNode;
+			node->code += $1->code;
+			$$ = node;
+		} 
+		| /* empty */ {
+			CodeNode* node = new CodeNode;
+                        $$ = node;
+		}
 		;
  
-Declarations: 	Identifier COLON Declare-Type
+Declarations: 	Identifier COLON INTEGER {
+			CodeNode*  node = new CodeNode;
+			node->name = $1->name;
+			node->code += ". " + $1->name + "\n";
+			addSymbol($1->name, Integer);
+			$$ = node;
+			
+		} 
+		| Identifier COLON ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER{
+			cout << ".[] " << $1->name << ", " << $5 << endl;			
+		}	
 		;
 
-Declare-Type:	INTEGER { printf("Declare-Type -> INTEGER\n"); }
-		| ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER 
-		{ printf("Declaration -> ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER\n"); }
+Statement:	Statements SEMICOLON Statement {
+			CodeNode* node = new CodeNode;
+			
+			node->code += $1->code;
+			$$ = node;
+		}
+		| /* empty */ {
+			CodeNode* node = new CodeNode;
+			$$ = node;
+		}
 		;
 
+Statements:	Var ASSIGN Expression {
+			string var = $1->name;
+			
+			if(!find(var)){
+				cout << "Error. Variable not declared" << endl;
+			}
 
-Statement:	Statements SEMICOLON Statement { printf("Statement -> Statements SEMICOLON Statement\n"); }
-		| /* empty */ { printf("Statement -> epsilon\n"); }
+			CodeNode* node = new CodeNode;
+			
+			node->code = $1->code + $3->code;
+			
+			string temp = $3->name;
+
+			if($1->arr && $3->arr){
+			}
+			else if($1->arr){
+			}
+			else if($3->arr){
+			}
+			else{
+				node->code += "= ";
+			} 
+
+			node->code += $1-name + ", " + temp + "\n";
+			
+			$$ = node;
+				 				
+					
+					
+		}
+		| IF BoolExp THEN Statement Else-State ENDIF { }
+		| WHILE BoolExp BEGINLOOP Statement ENDLOOP { }
+		| DO BEGINLOOP Statement ENDLOOP WHILE BoolExp { }
+		| READ Var {}
+		| WRITE Var {
+			CodeNode* node = new CodeNode;
+			code->code += $2->code + ". >" + $2->name << "\n";
+			$$ = node;  
+		}
+		| CONTINUE { }
+		| BREAK { }
+		| RETURN Expression { }
 		;
 
-Statements:	Var ASSIGN Expression {printf("Statement -> Var ASSIGN Expression\n"); }
-		| IF BoolExp THEN Statement Else-State ENDIF { printf("Statement -> IF BoolExp THEN Statement Else-State ENDIF\n"); }
-		| WHILE BoolExp BEGINLOOP Statement ENDLOOP { printf("Statement -> WHILE BoolExp BEGINLOOP Statement ENDLOOP\n"); }
-		| DO BEGINLOOP Statement ENDLOOP WHILE BoolExp { printf("Statement -> DO BEGINLOOP Statement ENDLOOP WHILE BoolExp\n"); }
-		| READ Var { printf("Statement -> READ Var\n"); }
-		| WRITE Var { printf("Statement -> WRITE Var\n"); }
-		| CONTINUE { printf("Statement -> CONTINUE\n"); }
-		| BREAK { printf("Statement -> BREAK\n"); }
-		| RETURN Expression { printf("Statement -> RETURN Expression\n"); }
-		;
-
-Else-State:	ELSE Statement { printf("Else-State -> ELSE Statement\n"); }
-		| /* empty */ { printf("Else-State -> epsilon\n"); }
+Else-State:	ELSE Statement { }
+		| /* empty */ { }
 		;	
 
-BoolExp: 	NOT BoolExp { printf("BoolExp -> NOT BoolExp\n"); }
-		| Expression Comp Expression { printf("BoolExp -> Expression Comp Expression\n"); }
+BoolExp: 	NOT BoolExp {  }
+		| Expression Comp Expression { }
 		;
 
-Comp: 		EQ { printf("Comp -> EQ\n"); }
-		| NEQ { printf("Comp -> NEQ\n"); }
-		| LT { printf("Comp -> LT\n"); }
-		| GT { printf("Comp -> GT\n"); }
-		| LTE { printf("Comp -> LTE\n"); }
-		| GTE { printf("Comp -> GTE\n"); }
+Comp: 		EQ 
+		| NEQ 
+		| LT 
+		| GT 
+		| LTE 
+		| GTE 
 		;
 
-Expression: 	MultExp Exp { printf("Expression -> MultExp Exp\n"); }
+Expression: 	MultExp { 
+			CodeNode* node = new CodeNode;
+			node->name = $1->name;
+			node->code = $1->code;
+			$$ = $1;
+	 	}
+		| MultExp ADD Expression{
+			string temp = create_temp();
+			CodeNode* node = new CodeNode;
+
+			node->name = strdup(temp.c_str());
+			node->code += $1->code + $3->code + ". " + node->name + "\n" + "+ " + $1->name + $3->name + "\n";
+			$$ = node;  
+			
+
+		}
+		| MultExp SUB Expression 
 		;
 
-Exp:		addOp MultExp { printf("Exp -> addOp MultExp\n"); }
-		| /* empty */ { printf("Exp -> epsilon\n"); }
+/*addOp:		ADD {
+			
+		}
+		| SUB { }
+		;*/
+
+MultExp: 	Term {
+
+			$$ = $1;
+		 	
+		} 
+		| Term MULT MultExp { }
+		| Term DIV MultExp { }
+		| Term MOD MultExp { }
 		;
 
-addOp:		ADD { printf("addOp -> ADD\n"); }
-		| SUB { printf("addOp -> SUB\n"); }
+/*Exp-Mult:	multOp Term {  }
+		| /* empty  { }
 		;
 
-MultExp: 	Term  Exp-Mult { printf("MultExp -> Term Exp-Mult\n"); }
+multOp:		MULT {  }
+		| DIV {  }
+		| MOD {  }
+		;*/
+
+		
+Term: 		Var {
+			$$ = $1;	 
+		}
+		| NUMBER {
+			CodeNode* node = new CodeNode;
+                        std::string str = to_string($1);
+			/*const char* c = str.c_str();
+			char* ch;
+			ch = strdup(c);
+			$$ = ch;*/
+			node->name = str;
+			node->code = "";
+			$$ = node;
+		}
+		| L_PAREN Expression R_PAREN {  }
+		| Identifier L_PAREN Exp-Paren R_PAREN { } 
 		;
 
-Exp-Mult:	multOp Term { printf("Exp-Mult -> multOp Term\n"); }
-		| /* empty */ { printf("Exp-Mult -> epsilon\n"); }
+Exp-Paren: 	Expression Exp-Comma { }
 		;
 
-multOp:		MULT { printf("multOp -> MULT\n"); }
-		| DIV { printf("multOp -> DIV\n"); }
-		| MOD { printf("multOp -> MOD\n"); }
-		;
-
-Term: 		Var { printf("Term -> Var\n"); }
-		| NUMBER { printf("Term -> NUMBER %d\n", $1); }
-		| L_PAREN Expression R_PAREN { printf("Term -> L_PAREN EXPRESSINO R_PAREN\n"); }
-		| Identifier L_PAREN Exp-Paren R_PAREN { printf("Term -> IDENT L-PAREN Exp-Paren R_PAREN\n"); } 
-		;
-
-Exp-Paren: 	Expression Exp-Comma { printf("Exp-Paren -> Expression Exp-Paren\n"); }
-		;
-
-Exp-Comma:	COMMA Exp-Paren { printf("Exp-Comma -> COMMA Exp-Paren\n"); }
-		| /* empty */ { printf("Exp-Comma -> epsilon\:wn"); }
+Exp-Comma:	COMMA Exp-Paren { }
+		| /* empty */ { }
 		; 
 
-Var: 		Identifier { printf("Var -> Identifier\n"); }
-		| Identifier L_SQUARE_BRACKET Expression  R_SQUARE_BRACKET { printf("Var -> Identifier L_SQUARE_BRACKET Expression R_SQUARE_BRACKET\n"); }
+Var: 		Identifier {
+			$$ = $1;
+		}
+		| Identifier L_SQUARE_BRACKET Expression  R_SQUARE_BRACKET { }
 		;
 
 Identifier: 	IDENT {
-		$$ = $1;
-		if(param_flag){
-			param_.push_back(*($1));
+			CodeNode* node = new CodeNode;
+			node->code = "";
+			node->name = $1;	
+			$$ = node;
 		}
-		if(local_flag){
-			local_.push_back(*($1));
-		}
-		}; 
+		; 
 		
 		
 %% 
@@ -220,11 +365,22 @@ int main(int argc, char **argv) {
     return 1;
 }
 
-void yyerror(const char *msg) {
+string create_temp(){
+	
+	string temp = "_temp" + to_string(temp_counter++);
+	return temp;
+}
+
+int yyerror(string msg) {
     /* implement your error handling */
   extern int line;
   extern int col;
   extern char* yytext;
-  printf("\n%s Error: On line %d, column %d: %s \n", msg, line, col, yytext);
+  cerr << msg << " Error: On line " << line << ", column " << col << ": " << yytext << endl;
+  exit(1);
     
+}
+
+int yyerror(const char *msg){
+	return yyerror(string(msg));
 }

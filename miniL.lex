@@ -5,7 +5,9 @@
 	#include <stdio.h>
 	#include "y.tab.h"	
 	int line = 1;
-	int col = 0;	
+	int col = 0;
+		
+        int yyerror(const char *msg);	
 %}
 
    /* some common rules */
@@ -90,11 +92,11 @@ ERROR3	{IDENT}"_"
 {comment}	{}
 {IDENT}		{ yylval.id = yytext; return IDENT; }
 {NUMBER}	{ yylval.num = atoi(yytext); return NUMBER; }
-{newline}	{line++; col = 0;}
-{whitespace}	{col++;}
-{ERROR1}	{yyerror("Unrecognized symbol");}
-{ERROR2}	{yyerror("Syntax");}
-{ERROR3}	{yyerror("Syntax");}
+{newline}	{ line++; col = 0;}
+{whitespace}	{ col++;}
+{ERROR1}	{ yyerror("Unrecognized symbol"); }
+{ERROR2}	{ yyerror("Syntax"); }
+{ERROR3}	{ yyerror("Syntax"); }
 
 %%
 	/* C functions used in lexer */
