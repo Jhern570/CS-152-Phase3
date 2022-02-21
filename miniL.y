@@ -2,6 +2,7 @@
 %{
 #define YY_NO_INPUT
 #include <iostream>
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,8 +19,10 @@ extern int yyparse();
 extern FILE *yyin;
 
 int yyerror(const char *msg);
-	
+
+int param_counter = -1;	
 int temp_counter = 0;
+stringstream out;
 
 std::vector<string>funct_;
 std::vector<string>param_;
@@ -126,11 +129,7 @@ struct CodeNode{
 %token AND
 %token OR
 %token RETURN
-%token SUB
-%token ADD
-%token MULT
-%token DIV
-%token MOD
+%left SUB ADD MULT DIV MOD
 %token EQ
 %token NEQ
 %token LT
@@ -145,10 +144,10 @@ struct CodeNode{
 %token L_SQUARE_BRACKET
 %token R_SQUARE_BRACKET
 %token ASSIGN
-%type<code_node> Identifier Var Term MultExp Statements Expression Statement Declarations Declaration 
+%type<code_node> Identifier Var Term MultExp Statements Expression Statement Declarations Declaration Funct Exp-Paren
+%type<code_node> Declar-Param Declar-Params
 
 %% 
-
   /* write your rules here */
 Program:	Functions { };
 
@@ -157,18 +156,48 @@ Functions:	Funct Functions { }
 		;
 
 Funct:		FUNCTION Identifier {
-			cout << "func " << $2->name << endl;					 	
+			
+			out <<  "func " << $2->name << endl;
+								 	
 		}
-		SEMICOLON BEGIN_PARAMS Declaration END_PARAMS BEGIN_LOCALS Declaration END_LOCALS BEGIN_BODY Statement END_BODY 
+		SEMICOLON BEGIN_PARAMS Declar-Param END_PARAMS BEGIN_LOCALS Declaration END_LOCALS BEGIN_BODY Statement END_BODY 
 		{
 	        	CodeNode* node = new CodeNode;
 			
 			node->code += $6->code + $9->code + $12->code + "endfunc\n\n";
 			
-			cout << node->code;
 			
+			out << node->code;
+			param_counter = -1;	
 		}
 		;
+
+Declar-Param:    Declar-Params SEMICOLON Declar-Param{
+                        CodeNode* node = new CodeNode;
+                        node->code += $1->code + "= " + $1->name + ", $" + to_string(param_counter--) + "\n" + $3->code;
+                        $$ = node;
+                }
+                | /* empty */ {
+                        CodeNode* node = new CodeNode;
+                        $$ = node;
+                }
+                ;
+
+Declar-Params:   Identifier COLON INTEGER {
+			param_counter++;
+                        CodeNode*  node = new CodeNode;
+                        node->name = $1->name;
+                        node->code += ". " + $1->name + "\n";
+                        /*addSymbol($1->name, Integer);*/
+                        $$ = node;
+
+                }
+                | Identifier COLON ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER{
+                           CodeNode* node = new CodeNode;
+                           node->code += ".[] " + $1->name + ", " + to_string($5) + "\n";
+                           $$ = node;
+                }
+                ;
 
 Declaration: 	Declarations SEMICOLON Declaration{
 			CodeNode* node = new CodeNode;
@@ -190,7 +219,9 @@ Declarations: 	Identifier COLON INTEGER {
 			
 		} 
 		| Identifier COLON ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER{
-			cout << ".[] " << $1->name << ", " << $5 << endl;			
+			   CodeNode* node = new CodeNode;
+   			   node->code += ".[] " + $1->name + ", " + to_string($5) + "\n";
+   			   $$ = node; 			
 		}	
 		;
 
@@ -215,22 +246,30 @@ Statements:	Var ASSIGN Expression {
 
 			CodeNode* node = new CodeNode;
 			
-			node->code = $1->code + $3->code;
+			node->code += $1->code + $3->code;
 			
-			string temp = $3->name;
+			
 
 			if($1->arr && $3->arr){
+				
 			}
 			else if($1->arr){
+				node->code += "[]= ";
 			}
 			else if($3->arr){
+				node->code += "=[] ";
 			}
 			else{
 				node->code += "= ";
 			} 
 
-			node->code += $1->name + ", " + temp + "\n";
+			node->code += $1->name + ", " + $3->name + "\n";
 			
+			if($1->arr){
+				string temp = create_temp();
+				node->name = temp;
+				node->code +=  ". " + temp + "\n";
+			}
 			$$ = node;
 				 				
 					
@@ -242,12 +281,23 @@ Statements:	Var ASSIGN Expression {
 		| READ Var {}
 		| WRITE Var {
 			CodeNode* node = new CodeNode;
-			node->code += $2->code + ".> " + $2->name + "\n";
+			if($2->arr){
+				 
+				node->code += $2->code + ".[]> " + $2->name + "\n";
+			}
+			else{
+				node->code += $2->code + ".> " + $2->name + "\n";
+			}
 			$$ = node;  
 		}
 		| CONTINUE { }
 		| BREAK { }
-		| RETURN Expression { }
+		| RETURN Expression {
+			CodeNode* node = new CodeNode;
+			node->code += $2->code + "ret " + $2->name + "\n";
+			$$ = node;
+			
+		}
 		;
 
 Else-State:	ELSE Statement { }
@@ -304,7 +354,7 @@ MultExp: 	Term {
                         CodeNode* node = new CodeNode;
 
                         node->name = strdup(temp.c_str());
-                        node->code += $1->code + $3->code + ". " + node->name + "\n" + "* " + temp + ", " + $1->name + ", "+ $3->name + "\n";
+                        node->code += $1->code + $3->code + ". " + node->name + "\n" + "* " + temp + ", " + $1->name + ", " + $3->name + "\n";
                         $$ = node;
 		}
 		| Term DIV MultExp { 
@@ -328,7 +378,19 @@ MultExp: 	Term {
 
 		
 Term: 		Var {
-			$$ = $1;	 
+			CodeNode* node = new CodeNode;
+			if($1->arr){
+				string temp = create_temp();
+				node->code += $1->code + ". " + temp + "\n" + "=[] " + temp + ", " + $1->name + "\n";
+				$$->arr = false;
+				node->name = temp;
+				
+			} 
+			else{
+				node->name = $1->name;
+				node->code = $1->code;
+			}
+			$$ = node;
 		}
 		| NUMBER {
 			CodeNode* node = new CodeNode;
@@ -337,21 +399,50 @@ Term: 		Var {
 			node->code = "";
 			$$ = node;
 		}
-		| L_PAREN Expression R_PAREN {  }
-		| Identifier L_PAREN Exp-Paren R_PAREN { } 
+		| L_PAREN Expression R_PAREN {  
+			CodeNode* node = new CodeNode;
+			node->name = $2->name;
+			node->code += $2->code;
+			$$ = node;
+		}
+		| Identifier L_PAREN Exp-Paren R_PAREN {
+			CodeNode* node = new CodeNode;
+			string temp = create_temp();
+			node->name = temp;
+			node->code += $3->code + ". " + temp + "\n" + "call " + $1->name + ", " + temp + "\n";  
+			$$ = node; 
+		} 
 		;
 
-Exp-Paren: 	Expression Exp-Comma { }
-		;
-
-Exp-Comma:	COMMA Exp-Paren { }
-		| /* empty */ { }
+Exp-Paren: 	Expression  {
+			CodeNode* node = new CodeNode;
+			node->code += $1->code + "param " + $1->name + "\n";
+			$$ = node;
+		}
+		| Expression COMMA Exp-Paren{
+			CodeNode* node = new CodeNode;
+                        node->code += $1->code + "param " + $1->name + "\n" + $3->code;
+                        $$ = node;
+		}
+		| /* empty */ {
+			CodeNode* node = new CodeNode;
+			$$ = node;
+		}
 		; 
 
 Var: 		Identifier {
-			$$ = $1;
+			CodeNode* node = new CodeNode;
+			node->name = $1->name;
+			node->code = "";
+			$$ = node;
 		}
-		| Identifier L_SQUARE_BRACKET Expression  R_SQUARE_BRACKET { }
+		| Identifier L_SQUARE_BRACKET Expression  R_SQUARE_BRACKET {
+			CodeNode* node = new CodeNode;
+			node->name = $1->name +", " + $3->name;
+			node->code += $3->code;
+			node->arr = true;
+		 	$$ = node;	
+ 		}
 		;
 
 Identifier: 	IDENT {
@@ -376,6 +467,9 @@ int main(int argc, char **argv) {
         yyin = stdin;
     }
     yyparse();
+    ofstream file("out.mil");
+    file << out.str() << endl;
+    file.close();
     return 1;
 }
 

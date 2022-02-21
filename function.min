@@ -21,8 +21,6 @@ beginbody
         return a * b;
 endbody
 
-
-
 function main;
 beginparams
 endparams
