@@ -112,35 +112,60 @@ struct Functions{
 
 std::vector<Functions>symbol_table;
 
-Functions getFunction(){
+Functions* getFunction(){
 	int last = symbol_table.size() - 1;
-       	return symbol_table.at(last);
+       	return &symbol_table[last];
 }
 
 bool find(std::string str){
-	Functions funct = getFunction();
-        for(vector<Symbols>::iterator it = funct.decla.begin(); it != funct.decla.end(); it++){
-        	Symbols s = *it;
-                if(s.name == str){
+	Functions* funct = getFunction();
+	for(int i = 0; i < funct->decla.size(); i++){
+                if(funct->decla[i].name == str){
                 	return true;
                 }
          }
          return false;
 }
 
-void addFunction(std::string str){
+bool find_function_name(std::string str){
+	
+
+	for(int i = 0; i < symbol_table.size(); i++){
+		if(symbol_table[i].name == str){
+			return true;
+		}
+	}
+	return false;
+}
+
+void addFunction(std::string &str){
 	Functions f;
         f.name = str;
         symbol_table.push_back(f);
 }
 
-void addSymbol(std::string str, Types t){
+void addSymbol(std::string &str, Types t){
  	Symbols s;
         s.name = str;
         s.type = t;
-        Functions f = getFunction();
-        f.decla.push_back(s);
+        Functions* f = getFunction();
+        f->decla.push_back(s);
  }
+
+/*void print_symbol_table(void) {
+  if(symbol_table.empty()){
+	printf("SYMBOL TABLE EMPTY\n");
+  }
+  printf("symbol table:\n");
+  printf("--------------------\n");
+  for(int i=0; i<symbol_table.size(); i++) {
+    printf("function: %s\n", symbol_table[i].name.c_str());
+    for(int j=0; j<symbol_table[i].decla.size(); j++) {
+      printf("  locals: %s\n", symbol_table[i].decla[j].name.c_str());
+    }
+  }
+  printf("--------------------\n");
+}*/
 
 struct CodeNode{
 	string name;
@@ -148,7 +173,7 @@ struct CodeNode{
 	bool arr;
 };	
 
-#line 152 "y.tab.c" /* yacc.c:339  */
+#line 177 "y.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -241,14 +266,14 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 89 "miniL.y" /* yacc.c:355  */
+#line 114 "miniL.y" /* yacc.c:355  */
 
   /* put your types here */
 	int num;
 	char *id;
 	struct CodeNode* code_node;			
 
-#line 252 "y.tab.c" /* yacc.c:355  */
+#line 277 "y.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -279,7 +304,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 283 "y.tab.c" /* yacc.c:358  */
+#line 308 "y.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -583,12 +608,12 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   152,   152,   154,   155,   158,   158,   175,   180,   186,
-     195,   202,   207,   213,   221,   228,   234,   240,   278,   279,
-     280,   281,   282,   293,   294,   295,   303,   304,   307,   308,
-     311,   312,   313,   314,   315,   316,   319,   325,   335,   347,
-     352,   360,   368,   380,   395,   402,   408,   417,   422,   427,
-     433,   439,   448
+       0,   178,   178,   186,   187,   190,   190,   220,   225,   231,
+     245,   257,   262,   269,   283,   295,   301,   307,   343,   344,
+     345,   346,   347,   358,   359,   360,   368,   369,   372,   373,
+     376,   377,   378,   379,   380,   381,   384,   390,   400,   412,
+     417,   425,   433,   445,   460,   467,   473,   485,   490,   495,
+     501,   512,   525
 };
 #endif
 
@@ -1528,35 +1553,53 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 152 "miniL.y" /* yacc.c:1646  */
-    { }
-#line 1534 "y.tab.c" /* yacc.c:1646  */
+#line 178 "miniL.y" /* yacc.c:1646  */
+    {
+			if(!find_function_name("main")){
+                                yyerror("Error. Function main name not declared\n");
+                        }
+			
+		}
+#line 1564 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 3:
-#line 154 "miniL.y" /* yacc.c:1646  */
+#line 186 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1540 "y.tab.c" /* yacc.c:1646  */
+#line 1570 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 4:
-#line 155 "miniL.y" /* yacc.c:1646  */
+#line 187 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1546 "y.tab.c" /* yacc.c:1646  */
+#line 1576 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 5:
-#line 158 "miniL.y" /* yacc.c:1646  */
+#line 190 "miniL.y" /* yacc.c:1646  */
     {
-			
-			out <<  "func " << (yyvsp[0].code_node)->name << endl;
-								 	
+			/* CHECK IF SYMBOL TABLE IS EMPTY. IF TRUE, THEN AUTOMATICALLY ADD THE FIRST FUNCTION
+			   IF FALSE, CHECK THAT IDENTIFIER IS NOT ALREADY BEING USED*/
+			if(symbol_table.empty()){
+				
+				addFunction((yyvsp[0].code_node)->name);
+				out <<  "func " << (yyvsp[0].code_node)->name << endl;
+			}
+			else{
+				if(find_function_name((yyvsp[0].code_node)->name)){
+					cerr << "Error. Funciton already declared" << endl; 
+				}
+				else{
+					addFunction((yyvsp[0].code_node)->name);
+					out <<  "func " << (yyvsp[0].code_node)->name << endl;
+				}
+			}					 	
 		}
-#line 1556 "y.tab.c" /* yacc.c:1646  */
+#line 1599 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 6:
-#line 164 "miniL.y" /* yacc.c:1646  */
+#line 209 "miniL.y" /* yacc.c:1646  */
     {
 	        	CodeNode* node = new CodeNode;
 			
@@ -1566,116 +1609,138 @@ yyreduce:
 			out << node->code;
 			param_counter = -1;	
 		}
-#line 1570 "y.tab.c" /* yacc.c:1646  */
+#line 1613 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 7:
-#line 175 "miniL.y" /* yacc.c:1646  */
+#line 220 "miniL.y" /* yacc.c:1646  */
     {
                         CodeNode* node = new CodeNode;
                         node->code += (yyvsp[-2].code_node)->code + "= " + (yyvsp[-2].code_node)->name + ", $" + to_string(param_counter--) + "\n" + (yyvsp[0].code_node)->code;
                         (yyval.code_node) = node;
                 }
-#line 1580 "y.tab.c" /* yacc.c:1646  */
+#line 1623 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 8:
-#line 180 "miniL.y" /* yacc.c:1646  */
+#line 225 "miniL.y" /* yacc.c:1646  */
     {
                         CodeNode* node = new CodeNode;
                         (yyval.code_node) = node;
                 }
-#line 1589 "y.tab.c" /* yacc.c:1646  */
+#line 1632 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 186 "miniL.y" /* yacc.c:1646  */
+#line 231 "miniL.y" /* yacc.c:1646  */
     {
+			if(find((yyvsp[-2].code_node)->name)){
+				string str = "Variable " + (yyvsp[-2].code_node)->name + " has already been declared as a parameter\n";
+				yyerror(str.c_str());
+			}
+			addSymbol((yyvsp[-2].code_node)->name, Integer);
 			param_counter++;
                         CodeNode*  node = new CodeNode;
                         node->name = (yyvsp[-2].code_node)->name;
                         node->code += ". " + (yyvsp[-2].code_node)->name + "\n";
-                        /*addSymbol($1->name, Integer);*/
+                       
                         (yyval.code_node) = node;
 
                 }
-#line 1603 "y.tab.c" /* yacc.c:1646  */
+#line 1651 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 10:
-#line 195 "miniL.y" /* yacc.c:1646  */
+#line 245 "miniL.y" /* yacc.c:1646  */
     {
+			   if(find((yyvsp[-7].code_node)->name)){
+                                string str = "Array variable " + (yyvsp[-7].code_node)->name + " has already been declared as a parameter\n";
+                                yyerror(str.c_str());
+                           }
+                           addSymbol((yyvsp[-7].code_node)->name, Array);
                            CodeNode* node = new CodeNode;
                            node->code += ".[] " + (yyvsp[-7].code_node)->name + ", " + to_string((yyvsp[-3].num)) + "\n";
                            (yyval.code_node) = node;
                 }
-#line 1613 "y.tab.c" /* yacc.c:1646  */
+#line 1666 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 11:
-#line 202 "miniL.y" /* yacc.c:1646  */
+#line 257 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
 			node->code += (yyvsp[-2].code_node)->code + (yyvsp[0].code_node)->code;
 			(yyval.code_node) = node;
 		}
-#line 1623 "y.tab.c" /* yacc.c:1646  */
+#line 1676 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 207 "miniL.y" /* yacc.c:1646  */
+#line 262 "miniL.y" /* yacc.c:1646  */
     {
+			
 			CodeNode* node = new CodeNode;
                         (yyval.code_node) = node;
 		}
-#line 1632 "y.tab.c" /* yacc.c:1646  */
+#line 1686 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 13:
-#line 213 "miniL.y" /* yacc.c:1646  */
+#line 269 "miniL.y" /* yacc.c:1646  */
     {
+			if(find((yyvsp[-2].code_node)->name)){
+                                string str = "Variable " + (yyvsp[-2].code_node)->name + " has already been declared\n";
+                                yyerror(str.c_str());
+                        }
+                        addSymbol((yyvsp[-2].code_node)->name, Integer);
+
+			
 			CodeNode*  node = new CodeNode;
 			node->name = (yyvsp[-2].code_node)->name;
 			node->code += ". " + (yyvsp[-2].code_node)->name + "\n";
-			/*addSymbol($1->name, Integer);*/
 			(yyval.code_node) = node;
 			
 		}
-#line 1645 "y.tab.c" /* yacc.c:1646  */
+#line 1705 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 14:
-#line 221 "miniL.y" /* yacc.c:1646  */
+#line 283 "miniL.y" /* yacc.c:1646  */
     {
+			   if(find((yyvsp[-7].code_node)->name)){
+                                string str = "Variable " + (yyvsp[-7].code_node)->name + " has already been declared\n";
+                                yyerror(str.c_str());
+                           }
+                           addSymbol((yyvsp[-7].code_node)->name, Array);
 			   CodeNode* node = new CodeNode;
    			   node->code += ".[] " + (yyvsp[-7].code_node)->name + ", " + to_string((yyvsp[-3].num)) + "\n";
    			   (yyval.code_node) = node; 			
 		}
-#line 1655 "y.tab.c" /* yacc.c:1646  */
+#line 1720 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 15:
-#line 228 "miniL.y" /* yacc.c:1646  */
+#line 295 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
 			
 			node->code += (yyvsp[-2].code_node)->code + (yyvsp[0].code_node)->code;
 			(yyval.code_node) = node;
 		}
-#line 1666 "y.tab.c" /* yacc.c:1646  */
+#line 1731 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 234 "miniL.y" /* yacc.c:1646  */
+#line 301 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
 			(yyval.code_node) = node;
 		}
-#line 1675 "y.tab.c" /* yacc.c:1646  */
+#line 1740 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 240 "miniL.y" /* yacc.c:1646  */
+#line 307 "miniL.y" /* yacc.c:1646  */
     {
 			string var = (yyvsp[-2].code_node)->name;
 			
@@ -1689,10 +1754,8 @@ yyreduce:
 			
 			
 
-			if((yyvsp[-2].code_node)->arr && (yyvsp[0].code_node)->arr){
-				
-			}
-			else if((yyvsp[-2].code_node)->arr){
+			
+			if((yyvsp[-2].code_node)->arr){
 				node->code += "[]= ";
 			}
 			else if((yyvsp[0].code_node)->arr){
@@ -1714,35 +1777,35 @@ yyreduce:
 					
 					
 		}
-#line 1718 "y.tab.c" /* yacc.c:1646  */
+#line 1781 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 18:
-#line 278 "miniL.y" /* yacc.c:1646  */
+#line 343 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1724 "y.tab.c" /* yacc.c:1646  */
+#line 1787 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 19:
-#line 279 "miniL.y" /* yacc.c:1646  */
+#line 344 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1730 "y.tab.c" /* yacc.c:1646  */
+#line 1793 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 280 "miniL.y" /* yacc.c:1646  */
+#line 345 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1736 "y.tab.c" /* yacc.c:1646  */
+#line 1799 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 281 "miniL.y" /* yacc.c:1646  */
+#line 346 "miniL.y" /* yacc.c:1646  */
     {}
-#line 1742 "y.tab.c" /* yacc.c:1646  */
+#line 1805 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 282 "miniL.y" /* yacc.c:1646  */
+#line 347 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
 			if((yyvsp[0].code_node)->arr){
@@ -1754,69 +1817,69 @@ yyreduce:
 			}
 			(yyval.code_node) = node;  
 		}
-#line 1758 "y.tab.c" /* yacc.c:1646  */
+#line 1821 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 23:
-#line 293 "miniL.y" /* yacc.c:1646  */
+#line 358 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1764 "y.tab.c" /* yacc.c:1646  */
+#line 1827 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 294 "miniL.y" /* yacc.c:1646  */
+#line 359 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1770 "y.tab.c" /* yacc.c:1646  */
+#line 1833 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 295 "miniL.y" /* yacc.c:1646  */
+#line 360 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
 			node->code += (yyvsp[0].code_node)->code + "ret " + (yyvsp[0].code_node)->name + "\n";
 			(yyval.code_node) = node;
 			
 		}
-#line 1781 "y.tab.c" /* yacc.c:1646  */
+#line 1844 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 303 "miniL.y" /* yacc.c:1646  */
+#line 368 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1787 "y.tab.c" /* yacc.c:1646  */
+#line 1850 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 304 "miniL.y" /* yacc.c:1646  */
+#line 369 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1793 "y.tab.c" /* yacc.c:1646  */
+#line 1856 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 28:
-#line 307 "miniL.y" /* yacc.c:1646  */
+#line 372 "miniL.y" /* yacc.c:1646  */
     {  }
-#line 1799 "y.tab.c" /* yacc.c:1646  */
+#line 1862 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 29:
-#line 308 "miniL.y" /* yacc.c:1646  */
+#line 373 "miniL.y" /* yacc.c:1646  */
     { }
-#line 1805 "y.tab.c" /* yacc.c:1646  */
+#line 1868 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 319 "miniL.y" /* yacc.c:1646  */
+#line 384 "miniL.y" /* yacc.c:1646  */
     { 
 			CodeNode* node = new CodeNode;
 			node->name = (yyvsp[0].code_node)->name;
 			node->code = (yyvsp[0].code_node)->code;
 			(yyval.code_node) = (yyvsp[0].code_node);
 	 	}
-#line 1816 "y.tab.c" /* yacc.c:1646  */
+#line 1879 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 37:
-#line 325 "miniL.y" /* yacc.c:1646  */
+#line 390 "miniL.y" /* yacc.c:1646  */
     {
 			string temp = create_temp();
 			CodeNode* node = new CodeNode;
@@ -1827,11 +1890,11 @@ yyreduce:
 			
 
 		}
-#line 1831 "y.tab.c" /* yacc.c:1646  */
+#line 1894 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 335 "miniL.y" /* yacc.c:1646  */
+#line 400 "miniL.y" /* yacc.c:1646  */
     {
 			string temp = create_temp();
                         CodeNode* node = new CodeNode;
@@ -1840,21 +1903,21 @@ yyreduce:
                         node->code += (yyvsp[-2].code_node)->code + (yyvsp[0].code_node)->code + ". " + node->name + "\n" + "- " + temp + ", " + (yyvsp[-2].code_node)->name + ", "+ (yyvsp[0].code_node)->name + "\n";
                         (yyval.code_node) = node;
 		}
-#line 1844 "y.tab.c" /* yacc.c:1646  */
+#line 1907 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 39:
-#line 347 "miniL.y" /* yacc.c:1646  */
+#line 412 "miniL.y" /* yacc.c:1646  */
     {
 
 			(yyval.code_node) = (yyvsp[0].code_node);
 		 	
 		}
-#line 1854 "y.tab.c" /* yacc.c:1646  */
+#line 1917 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 40:
-#line 352 "miniL.y" /* yacc.c:1646  */
+#line 417 "miniL.y" /* yacc.c:1646  */
     {
 			string temp = create_temp();
                         CodeNode* node = new CodeNode;
@@ -1863,11 +1926,11 @@ yyreduce:
                         node->code += (yyvsp[-2].code_node)->code + (yyvsp[0].code_node)->code + ". " + node->name + "\n" + "* " + temp + ", " + (yyvsp[-2].code_node)->name + ", " + (yyvsp[0].code_node)->name + "\n";
                         (yyval.code_node) = node;
 		}
-#line 1867 "y.tab.c" /* yacc.c:1646  */
+#line 1930 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 360 "miniL.y" /* yacc.c:1646  */
+#line 425 "miniL.y" /* yacc.c:1646  */
     { 
 			string temp = create_temp();
                         CodeNode* node = new CodeNode;
@@ -1876,11 +1939,11 @@ yyreduce:
                         node->code += (yyvsp[-2].code_node)->code + (yyvsp[0].code_node)->code + ". " + node->name + "\n" + "/ " + temp + ", " + (yyvsp[-2].code_node)->name + ", "+ (yyvsp[0].code_node)->name + "\n";
                         (yyval.code_node) = node;
 		}
-#line 1880 "y.tab.c" /* yacc.c:1646  */
+#line 1943 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 368 "miniL.y" /* yacc.c:1646  */
+#line 433 "miniL.y" /* yacc.c:1646  */
     {
 			string temp = create_temp();
                         CodeNode* node = new CodeNode;
@@ -1889,11 +1952,11 @@ yyreduce:
                         node->code += (yyvsp[-2].code_node)->code + (yyvsp[0].code_node)->code + ". " + node->name + "\n" + "% " + temp + ", " + (yyvsp[-2].code_node)->name + ", "+ (yyvsp[0].code_node)->name + "\n";
                         (yyval.code_node) = node;
 		}
-#line 1893 "y.tab.c" /* yacc.c:1646  */
+#line 1956 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 380 "miniL.y" /* yacc.c:1646  */
+#line 445 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
 			if((yyvsp[0].code_node)->arr){
@@ -1909,11 +1972,11 @@ yyreduce:
 			}
 			(yyval.code_node) = node;
 		}
-#line 1913 "y.tab.c" /* yacc.c:1646  */
+#line 1976 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 395 "miniL.y" /* yacc.c:1646  */
+#line 460 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
                         std::string str = to_string((yyvsp[0].num));
@@ -1921,97 +1984,109 @@ yyreduce:
 			node->code = "";
 			(yyval.code_node) = node;
 		}
-#line 1925 "y.tab.c" /* yacc.c:1646  */
+#line 1988 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 402 "miniL.y" /* yacc.c:1646  */
+#line 467 "miniL.y" /* yacc.c:1646  */
     {  
 			CodeNode* node = new CodeNode;
 			node->name = (yyvsp[-1].code_node)->name;
 			node->code += (yyvsp[-1].code_node)->code;
 			(yyval.code_node) = node;
 		}
-#line 1936 "y.tab.c" /* yacc.c:1646  */
+#line 1999 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 408 "miniL.y" /* yacc.c:1646  */
+#line 473 "miniL.y" /* yacc.c:1646  */
     {
+			if(!find_function_name((yyvsp[-3].code_node)->name)){
+				yyerror("Function name is not declared\n");
+			}
 			CodeNode* node = new CodeNode;
 			string temp = create_temp();
 			node->name = temp;
 			node->code += (yyvsp[-1].code_node)->code + ". " + temp + "\n" + "call " + (yyvsp[-3].code_node)->name + ", " + temp + "\n";  
 			(yyval.code_node) = node; 
 		}
-#line 1948 "y.tab.c" /* yacc.c:1646  */
+#line 2014 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 417 "miniL.y" /* yacc.c:1646  */
+#line 485 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
 			node->code += (yyvsp[0].code_node)->code + "param " + (yyvsp[0].code_node)->name + "\n";
 			(yyval.code_node) = node;
 		}
-#line 1958 "y.tab.c" /* yacc.c:1646  */
+#line 2024 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 422 "miniL.y" /* yacc.c:1646  */
+#line 490 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
                         node->code += (yyvsp[-2].code_node)->code + "param " + (yyvsp[-2].code_node)->name + "\n" + (yyvsp[0].code_node)->code;
                         (yyval.code_node) = node;
 		}
-#line 1968 "y.tab.c" /* yacc.c:1646  */
+#line 2034 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 427 "miniL.y" /* yacc.c:1646  */
+#line 495 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
 			(yyval.code_node) = node;
 		}
-#line 1977 "y.tab.c" /* yacc.c:1646  */
+#line 2043 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 433 "miniL.y" /* yacc.c:1646  */
+#line 501 "miniL.y" /* yacc.c:1646  */
     {
+			string str = "Variable " + (yyvsp[0].code_node)->name + " not declared\n";
+			
+			if(!find((yyvsp[0].code_node)->name)){
+				yyerror(str.c_str());
+			}
 			CodeNode* node = new CodeNode;
 			node->name = (yyvsp[0].code_node)->name;
 			node->code = "";
 			(yyval.code_node) = node;
 		}
-#line 1988 "y.tab.c" /* yacc.c:1646  */
+#line 2059 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 439 "miniL.y" /* yacc.c:1646  */
+#line 512 "miniL.y" /* yacc.c:1646  */
     {
+			string str = "Array variable " + (yyvsp[-3].code_node)->name + " not declared\n";
+			if(!find((yyvsp[-3].code_node)->name)){
+                                yyerror(str.c_str());
+                        }
 			CodeNode* node = new CodeNode;
-			node->name = (yyvsp[-3].code_node)->name +", " + (yyvsp[-1].code_node)->name;
+			node->name = (yyvsp[-3].code_node)->name + ", " + (yyvsp[-1].code_node)->name;
 			node->code += (yyvsp[-1].code_node)->code;
 			node->arr = true;
 		 	(yyval.code_node) = node;	
  		}
-#line 2000 "y.tab.c" /* yacc.c:1646  */
+#line 2075 "y.tab.c" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 448 "miniL.y" /* yacc.c:1646  */
+#line 525 "miniL.y" /* yacc.c:1646  */
     {
 			CodeNode* node = new CodeNode;
 			node->code = "";
 			node->name = (yyvsp[0].id);	
 			(yyval.code_node) = node;
 		}
-#line 2011 "y.tab.c" /* yacc.c:1646  */
+#line 2086 "y.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 2015 "y.tab.c" /* yacc.c:1646  */
+#line 2090 "y.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2246,7 +2321,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 457 "miniL.y" /* yacc.c:1906  */
+#line 534 "miniL.y" /* yacc.c:1906  */
  
 
 int main(int argc, char **argv) {
@@ -2277,8 +2352,8 @@ int yyerror(string msg) {
   extern int line;
   extern int col;
   extern char* yytext;
-  cerr << msg << " Error: On line " << line << ", column " << col << ": " << yytext << endl;
-  exit(1);
+  cerr << msg << "Error: On line " << line << ", column " << col << ": " << yytext << endl;
+  
     
 }
 

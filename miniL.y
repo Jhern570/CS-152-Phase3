@@ -48,35 +48,60 @@ struct Functions{
 
 std::vector<Functions>symbol_table;
 
-Functions getFunction(){
+Functions* getFunction(){
 	int last = symbol_table.size() - 1;
-       	return symbol_table.at(last);
+       	return &symbol_table[last];
 }
 
 bool find(std::string str){
-	Functions funct = getFunction();
-        for(vector<Symbols>::iterator it = funct.decla.begin(); it != funct.decla.end(); it++){
-        	Symbols s = *it;
-                if(s.name == str){
+	Functions* funct = getFunction();
+	for(int i = 0; i < funct->decla.size(); i++){
+                if(funct->decla[i].name == str){
                 	return true;
                 }
          }
          return false;
 }
 
-void addFunction(std::string str){
+bool find_function_name(std::string str){
+	
+
+	for(int i = 0; i < symbol_table.size(); i++){
+		if(symbol_table[i].name == str){
+			return true;
+		}
+	}
+	return false;
+}
+
+void addFunction(std::string &str){
 	Functions f;
         f.name = str;
         symbol_table.push_back(f);
 }
 
-void addSymbol(std::string str, Types t){
+void addSymbol(std::string &str, Types t){
  	Symbols s;
         s.name = str;
         s.type = t;
-        Functions f = getFunction();
-        f.decla.push_back(s);
+        Functions* f = getFunction();
+        f->decla.push_back(s);
  }
+
+/*void print_symbol_table(void) {
+  if(symbol_table.empty()){
+	printf("SYMBOL TABLE EMPTY\n");
+  }
+  printf("symbol table:\n");
+  printf("--------------------\n");
+  for(int i=0; i<symbol_table.size(); i++) {
+    printf("function: %s\n", symbol_table[i].name.c_str());
+    for(int j=0; j<symbol_table[i].decla.size(); j++) {
+      printf("  locals: %s\n", symbol_table[i].decla[j].name.c_str());
+    }
+  }
+  printf("--------------------\n");
+}*/
 
 struct CodeNode{
 	string name;
@@ -148,17 +173,37 @@ struct CodeNode{
 %type<code_node> Declar-Param Declar-Params
 
 %% 
-  /* write your rules here */
-Program:	Functions { };
+  /* write your rules here */		
+
+Program:	Functions {
+			if(!find_function_name("main")){
+                                yyerror("Error. Function main name not declared\n");
+                        }
+			
+		}			
+		;
 
 Functions:	Funct Functions { }
 		| /* empty */ { }
 		;
 
 Funct:		FUNCTION Identifier {
-			
-			out <<  "func " << $2->name << endl;
-								 	
+			/* CHECK IF SYMBOL TABLE IS EMPTY. IF TRUE, THEN AUTOMATICALLY ADD THE FIRST FUNCTION
+			   IF FALSE, CHECK THAT IDENTIFIER IS NOT ALREADY BEING USED*/
+			if(symbol_table.empty()){
+				
+				addFunction($2->name);
+				out <<  "func " << $2->name << endl;
+			}
+			else{
+				if(find_function_name($2->name)){
+					cerr << "Error. Funciton already declared" << endl; 
+				}
+				else{
+					addFunction($2->name);
+					out <<  "func " << $2->name << endl;
+				}
+			}					 	
 		}
 		SEMICOLON BEGIN_PARAMS Declar-Param END_PARAMS BEGIN_LOCALS Declaration END_LOCALS BEGIN_BODY Statement END_BODY 
 		{
@@ -184,15 +229,25 @@ Declar-Param:    Declar-Params SEMICOLON Declar-Param{
                 ;
 
 Declar-Params:   Identifier COLON INTEGER {
+			if(find($1->name)){
+				string str = "Variable " + $1->name + " has already been declared as a parameter\n";
+				yyerror(str.c_str());
+			}
+			addSymbol($1->name, Integer);
 			param_counter++;
                         CodeNode*  node = new CodeNode;
                         node->name = $1->name;
                         node->code += ". " + $1->name + "\n";
-                        /*addSymbol($1->name, Integer);*/
+                       
                         $$ = node;
 
                 }
                 | Identifier COLON ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER{
+			   if(find($1->name)){
+                                string str = "Array variable " + $1->name + " has already been declared as a parameter\n";
+                                yyerror(str.c_str());
+                           }
+                           addSymbol($1->name, Array);
                            CodeNode* node = new CodeNode;
                            node->code += ".[] " + $1->name + ", " + to_string($5) + "\n";
                            $$ = node;
@@ -205,20 +260,32 @@ Declaration: 	Declarations SEMICOLON Declaration{
 			$$ = node;
 		} 
 		| /* empty */ {
+			
 			CodeNode* node = new CodeNode;
                         $$ = node;
 		}
 		;
  
 Declarations: 	Identifier COLON INTEGER {
+			if(find($1->name)){
+                                string str = "Variable " + $1->name + " has already been declared\n";
+                                yyerror(str.c_str());
+                        }
+                        addSymbol($1->name, Integer);
+
+			
 			CodeNode*  node = new CodeNode;
 			node->name = $1->name;
 			node->code += ". " + $1->name + "\n";
-			/*addSymbol($1->name, Integer);*/
 			$$ = node;
 			
 		} 
 		| Identifier COLON ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER{
+			   if(find($1->name)){
+                                string str = "Variable " + $1->name + " has already been declared\n";
+                                yyerror(str.c_str());
+                           }
+                           addSymbol($1->name, Array);
 			   CodeNode* node = new CodeNode;
    			   node->code += ".[] " + $1->name + ", " + to_string($5) + "\n";
    			   $$ = node; 			
@@ -250,10 +317,8 @@ Statements:	Var ASSIGN Expression {
 			
 			
 
-			if($1->arr && $3->arr){
-				
-			}
-			else if($1->arr){
+			
+			if($1->arr){
 				node->code += "[]= ";
 			}
 			else if($3->arr){
@@ -406,6 +471,9 @@ Term: 		Var {
 			$$ = node;
 		}
 		| Identifier L_PAREN Exp-Paren R_PAREN {
+			if(!find_function_name($1->name)){
+				yyerror("Function name is not declared\n");
+			}
 			CodeNode* node = new CodeNode;
 			string temp = create_temp();
 			node->name = temp;
@@ -431,14 +499,23 @@ Exp-Paren: 	Expression  {
 		; 
 
 Var: 		Identifier {
+			string str = "Variable " + $1->name + " not declared\n";
+			
+			if(!find($1->name)){
+				yyerror(str.c_str());
+			}
 			CodeNode* node = new CodeNode;
 			node->name = $1->name;
 			node->code = "";
 			$$ = node;
 		}
 		| Identifier L_SQUARE_BRACKET Expression  R_SQUARE_BRACKET {
+			string str = "Array variable " + $1->name + " not declared\n";
+			if(!find($1->name)){
+                                yyerror(str.c_str());
+                        }
 			CodeNode* node = new CodeNode;
-			node->name = $1->name +", " + $3->name;
+			node->name = $1->name + ", " + $3->name;
 			node->code += $3->code;
 			node->arr = true;
 		 	$$ = node;	
@@ -484,8 +561,8 @@ int yyerror(string msg) {
   extern int line;
   extern int col;
   extern char* yytext;
-  cerr << msg << " Error: On line " << line << ", column " << col << ": " << yytext << endl;
-  exit(1);
+  cerr << msg << "Error: On line " << line << ", column " << col << ": " << yytext << endl;
+  
     
 }
 
