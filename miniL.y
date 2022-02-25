@@ -22,6 +22,7 @@ int yyerror(const char *msg);
 
 int param_counter = -1;	
 int temp_counter = 0;
+int label_counter = 0;
 stringstream out;
 
 std::vector<string>funct_;
@@ -33,7 +34,7 @@ std::vector<int>temp_value;
 
 
 string create_temp();
-
+string create_label();
 enum Types { Integer, Array };
 
 struct Symbols{
@@ -373,12 +374,37 @@ BoolExp: 	NOT BoolExp {  }
 		| Expression Comp Expression { }
 		;
 
-Comp: 		EQ 
-		| NEQ 
-		| LT 
-		| GT 
-		| LTE 
-		| GTE 
+Comp: 		EQ	{
+			CodeNode* node = new CodeNode;
+			node->name ="== ";
+			$$ = node;
+			} 
+		| NEQ	{
+			CodeNode* node = new CodeNode;
+			node->name = "!=";
+			$$ = node;
+			} 
+		| LT  	{
+			CodeNode* node = new CodeNode;
+			node->name = "< ";
+			$$ = node;
+			}
+		| GT 	{
+			CodeNode* node = new CodeNode;
+			node->name = "> ";
+			$$ = node;
+			}
+		| LTE 	{
+			CodeNode* node = new CodeNode;
+			node->name = "<= ";
+			$$ = node;
+			}
+		| GTE 	{
+			CodeNode* node = new CodeNode;
+			node->name = ">= ";
+			$$ = node;
+
+	}
 		;
 
 Expression: 	MultExp { 
@@ -555,7 +581,10 @@ string create_temp(){
 	string temp = "_temp" + to_string(temp_counter++);
 	return temp;
 }
-
+string create_label(){
+	string label = "_label"+to_string(label_counter++);
+	return label;
+}
 int yyerror(string msg) {
     /* implement your error handling */
   extern int line;
