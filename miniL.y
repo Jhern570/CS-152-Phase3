@@ -171,7 +171,7 @@ struct CodeNode{
 %token R_SQUARE_BRACKET
 %token ASSIGN
 %type<code_node> Identifier Var Term MultExp Statements Expression Statement Declarations Declaration Funct Exp-Paren
-%type<code_node> Declar-Param Declar-Params
+%type<code_node> Declar-Param Declar-Params Else-State BoolExp Comp
 
 %% 
   /* write your rules here */		
@@ -341,7 +341,15 @@ Statements:	Var ASSIGN Expression {
 					
 					
 		}
-		| IF BoolExp THEN Statement Else-State ENDIF { }
+		| IF BoolExp THEN Statement Else-State ENDIF { 
+			CodeNode* node = new CodeNode;
+			string label_begin = create_label();
+			string label_after = create_label();
+			node->code += $2->code + "?:= " + label_begin + ", " + $2->name + "\n" + ":= " + label_after + "\n" + ": " + label_begin + "\n" + $4->code;
+			string label_end = create_label();
+			node->code += ":= " + label_end + "\n"  + ": " + label_after + "\n" + $5->code + ": " + label_end + "\n"; 			
+			$$ = node;
+		}
 		| WHILE BoolExp BEGINLOOP Statement ENDLOOP { }
 		| DO BEGINLOOP Statement ENDLOOP WHILE BoolExp { }
 		| READ Var {}
@@ -366,12 +374,28 @@ Statements:	Var ASSIGN Expression {
 		}
 		;
 
-Else-State:	ELSE Statement { }
-		| /* empty */ { }
+Else-State:	ELSE Statement {
+		
+			CodeNode* node = new CodeNode;
+			node->code += $2->code;
+			$$ = node; 
+			
+		}
+		| /* empty */ {
+			CodeNode* node = new CodeNode;
+			$$ = node;
+		}
 		;	
 
 BoolExp: 	NOT BoolExp {  }
-		| Expression Comp Expression { }
+		| Expression Comp Expression {
+			CodeNode* node = new CodeNode;
+			string temp = create_temp();
+			node->name = temp;
+			node->code = $1->code + $3->code + ". " + temp + "\n" + $2->name + " " + temp  + ", " + $1->name +  ", " + $3->name + "\n";
+			$$ = node;
+			
+		}
 		;
 
 Comp: 		EQ	{
