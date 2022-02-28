@@ -350,9 +350,33 @@ Statements:	Var ASSIGN Expression {
 			node->code += ":= " + label_end + "\n"  + ": " + label_after + "\n" + $5->code + ": " + label_end + "\n"; 			
 			$$ = node;
 		}
-		| WHILE BoolExp BEGINLOOP Statement ENDLOOP { }
+		| WHILE BoolExp BEGINLOOP Statement ENDLOOP { 
+			CodeNode* node = new CodeNode;
+			string beginLoop = create_label();
+			string loopBody = create_label();
+			string endLoop = create_label();
+			string code = $4->code;
+			while(code.find("break") != string::npos){
+				code.replace(code.find("break"), 5, endLoop);  
+			}
+			while(code.find("continue") != string::npos){
+                                code.replace(code.find("continue"), 8, beginLoop);
+                        }	
+			node->code += ": " + beginLoop + "\n" + $2->code + "?:= " + loopBody + ", " + $2->name + "\n" + ":= " + endLoop + "\n" + ": " + loopBody + "\n" + code + ":= " + beginLoop + "\n" + ": " + endLoop + "\n";
+			$$ = node;
+		}
 		| DO BEGINLOOP Statement ENDLOOP WHILE BoolExp { }
-		| READ Var {}
+		| READ Var {
+			CodeNode* node = new CodeNode;
+			if($2->arr){
+
+                                node->code += $2->code + ".[]< " + $2->name + "\n";
+                        }
+                        else{
+                                node->code += $2->code + ".< " + $2->name + "\n";
+                        }
+                        $$ = node;
+		}
 		| WRITE Var {
 			CodeNode* node = new CodeNode;
 			if($2->arr){
@@ -364,8 +388,18 @@ Statements:	Var ASSIGN Expression {
 			}
 			$$ = node;  
 		}
-		| CONTINUE { }
-		| BREAK { }
+		| CONTINUE { 
+			CodeNode* node = new CodeNode;
+                        string break_label = ":= continue\n";
+                        node->code = break_label;
+                        $$ = node;
+		}
+		| BREAK {
+			CodeNode* node = new CodeNode;
+			string break_label = ":= break\n"; 	
+			node->code = break_label;
+			$$ = node;
+		}
 		| RETURN Expression {
 			CodeNode* node = new CodeNode;
 			node->code += $2->code + "ret " + $2->name + "\n";
@@ -400,7 +434,7 @@ BoolExp: 	NOT BoolExp {  }
 
 Comp: 		EQ	{
 			CodeNode* node = new CodeNode;
-			node->name ="== ";
+			node->name = "== ";
 			$$ = node;
 			} 
 		| NEQ	{
@@ -556,6 +590,7 @@ Var: 		Identifier {
 			}
 			CodeNode* node = new CodeNode;
 			node->name = $1->name;
+			node->arr = false;
 			node->code = "";
 			$$ = node;
 		}
