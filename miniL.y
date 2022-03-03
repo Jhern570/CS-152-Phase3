@@ -31,7 +31,9 @@ std::vector<string>var_;
 std::vector<string>type_;
 std::vector<string>temp_;
 std::vector<int>temp_value;
+stack<string> continue_stack;
 
+vector<string> reserved_words = {"TRUE","function", "beginparams", "endparams", "beginlocals", "endlocals", "integer", "array", "of", "they", "beginbody", "endbody", "beginloop", "endloop", "if", "endif", "continue", "break", "while", "else", "read", "do", "write", "not", "true", "false", "return"};
 
 string create_temp();
 string create_label();
@@ -62,6 +64,15 @@ bool find(std::string str){
                 }
          }
          return false;
+}
+
+bool find_reserved_word(string str){
+	for(int i = 0; i < reserved_words.size(); i++){
+		if(str == reserved_words[i]){
+			return true;
+		}
+	}
+        return false;
 }
 
 bool find_function_name(std::string str){
@@ -171,7 +182,7 @@ struct CodeNode{
 %token R_SQUARE_BRACKET
 %token ASSIGN
 %type<code_node> Identifier Var Term MultExp Statements Expression Statement Declarations Declaration Funct Exp-Paren
-%type<code_node> Declar-Param Declar-Params
+%type<code_node> Declar-Param Declar-Params Else-State BoolExp Comp
 
 %% 
   /* write your rules here */		
@@ -200,6 +211,10 @@ Funct:		FUNCTION Identifier {
 				if(find_function_name($2->name)){
 					cerr << "Error. Funciton already declared" << endl; 
 				}
+				else if(find_reserved_word($2->name)){
+					string str = "Variable " + $2->name + " is a reserved word\n";
+                                	yyerror(str.c_str());
+				}	
 				else{
 					addFunction($2->name);
 					out <<  "func " << $2->name << endl;
@@ -209,10 +224,12 @@ Funct:		FUNCTION Identifier {
 		SEMICOLON BEGIN_PARAMS Declar-Param END_PARAMS BEGIN_LOCALS Declaration END_LOCALS BEGIN_BODY Statement END_BODY 
 		{
 	        	CodeNode* node = new CodeNode;
-			
+			if(!continue_stack.empty()){
+                                cerr << "Error. Continue not declared inside loop\n";
+                        }
 			node->code += $6->code + $9->code + $12->code + "endfunc\n\n";
 			
-			
+		        	
 			out << node->code;
 			param_counter = -1;	
 		}
@@ -234,6 +251,11 @@ Declar-Params:   Identifier COLON INTEGER {
 				string str = "Variable " + $1->name + " has already been declared as a parameter\n";
 				yyerror(str.c_str());
 			}
+			if(find_reserved_word($1->name)){
+				string str = "Variable " + $1->name + " is a reserved word\n";
+				/*yyerror(str.c_str());*/
+				cerr << str;
+			}
 			addSymbol($1->name, Integer);
 			param_counter++;
                         CodeNode*  node = new CodeNode;
@@ -246,6 +268,10 @@ Declar-Params:   Identifier COLON INTEGER {
                 | Identifier COLON ARRAY L_SQUARE_BRACKET NUMBER R_SQUARE_BRACKET OF INTEGER{
 			   if(find($1->name)){
                                 string str = "Array variable " + $1->name + " has already been declared as a parameter\n";
+                                yyerror(str.c_str());
+                           }
+			   if(find_reserved_word($1->name)){
+                                string str = "Variable " + $1->name + " is a reserved word\n";
                                 yyerror(str.c_str());
                            }
                            addSymbol($1->name, Array);
@@ -286,6 +312,9 @@ Declarations: 	Identifier COLON INTEGER {
                                 string str = "Variable " + $1->name + " has already been declared\n";
                                 yyerror(str.c_str());
                            }
+			   if($5 < 0){
+                                cerr << "Error. Array size cannot be less then 0\n";
+                           }
                            addSymbol($1->name, Array);
 			   CodeNode* node = new CodeNode;
    			   node->code += ".[] " + $1->name + ", " + to_string($5) + "\n";
@@ -295,8 +324,8 @@ Declarations: 	Identifier COLON INTEGER {
 
 Statement:	Statements SEMICOLON Statement {
 			CodeNode* node = new CodeNode;
-			
 			node->code += $1->code + $3->code;
+		
 			$$ = node;
 		}
 		| /* empty */ {
@@ -341,10 +370,62 @@ Statements:	Var ASSIGN Expression {
 					
 					
 		}
-		| IF BoolExp THEN Statement Else-State ENDIF { }
-		| WHILE BoolExp BEGINLOOP Statement ENDLOOP { }
-		| DO BEGINLOOP Statement ENDLOOP WHILE BoolExp { }
-		| READ Var {}
+		| IF BoolExp THEN Statement Else-State ENDIF { 
+			CodeNode* node = new CodeNode;
+			string label_begin = create_label();
+			string label_after = create_label();
+			node->code += $2->code + "?:= " + label_begin + ", " + $2->name + "\n" + ":= " + label_after + "\n" + ": " + label_begin + "\n" + $4->code;
+			string label_end = create_label();
+			node->code += ":= " + label_end + "\n"  + ": " + label_after + "\n" + $5->code + ": " + label_end + "\n"; 			
+			$$ = node;
+		}
+		| WHILE BoolExp BEGINLOOP Statement ENDLOOP { 
+			CodeNode* node = new CodeNode;
+			string beginLoop = create_label();
+			string loopBody = create_label();
+			string endLoop = create_label();
+			string code = $4->code;
+			while(code.find("break") != string::npos){
+				code.replace(code.find("break"), 5, endLoop);  
+			}
+			while(code.find("continue") != string::npos){
+                                code.replace(code.find("continue"), 8, beginLoop);
+                        }	
+			node->code += ": " + beginLoop + "\n" + $2->code + "?:= " + loopBody + ", " + $2->name + "\n" + ":= " + endLoop + "\n" + ": " + loopBody + "\n" + code + ":= " + beginLoop + "\n" + ": " + endLoop + "\n";
+			if(!continue_stack.empty()){
+                                continue_stack.pop();
+                                continue_stack.pop();
+                        }
+			$$ = node;
+		}
+		| DO BEGINLOOP Statement ENDLOOP WHILE BoolExp {
+ 			CodeNode* node = new CodeNode;
+		
+			string beginLoop = create_label();
+			string loopBody = create_label();
+			string endLoop = create_label();
+			string code = $3->code;
+			while(code.find("break") != string::npos){
+                                code.replace(code.find("break"), 5, endLoop);
+                        }			
+			node->code += ": " + loopBody + "\n" + code + ": " + beginLoop + "\n" + $6->code + "?:= " + loopBody + ", "  + $6->name + "\n"  + ":= " + endLoop + "\n" + ": " + endLoop + "\n";
+			if(!continue_stack.empty()){
+				continue_stack.pop();
+				continue_stack.pop();
+			}
+			$$ = node;	 
+		}
+		| READ Var {
+			CodeNode* node = new CodeNode;
+			if($2->arr){
+
+                                node->code += $2->code + ".[]< " + $2->name + "\n";
+                        }
+                        else{
+                                node->code += $2->code + ".< " + $2->name + "\n";
+                        }
+                        $$ = node;
+		}
 		| WRITE Var {
 			CodeNode* node = new CodeNode;
 			if($2->arr){
@@ -356,8 +437,20 @@ Statements:	Var ASSIGN Expression {
 			}
 			$$ = node;  
 		}
-		| CONTINUE { }
-		| BREAK { }
+		| CONTINUE { 
+			CodeNode* node = new CodeNode;
+                        string break_label = ":= continue\n";
+			continue_stack.push("begin");
+			continue_stack.push("continue");
+                        node->code = break_label;
+                        $$ = node;
+		}
+		| BREAK {
+			CodeNode* node = new CodeNode;
+			string break_label = ":= break\n"; 	
+			node->code = break_label;
+			$$ = node;
+		}
 		| RETURN Expression {
 			CodeNode* node = new CodeNode;
 			node->code += $2->code + "ret " + $2->name + "\n";
@@ -366,17 +459,33 @@ Statements:	Var ASSIGN Expression {
 		}
 		;
 
-Else-State:	ELSE Statement { }
-		| /* empty */ { }
+Else-State:	ELSE Statement {
+		
+			CodeNode* node = new CodeNode;
+			node->code += $2->code;
+			$$ = node; 
+			
+		}
+		| /* empty */ {
+			CodeNode* node = new CodeNode;
+			$$ = node;
+		}
 		;	
 
 BoolExp: 	NOT BoolExp {  }
-		| Expression Comp Expression { }
+		| Expression Comp Expression {
+			CodeNode* node = new CodeNode;
+			string temp = create_temp();
+			node->name = temp;
+			node->code = $1->code + $3->code + ". " + temp + "\n" + $2->name + " " + temp  + ", " + $1->name +  ", " + $3->name + "\n";
+			$$ = node;
+			
+		}
 		;
 
 Comp: 		EQ	{
 			CodeNode* node = new CodeNode;
-			node->name ="== ";
+			node->name = "== ";
 			$$ = node;
 			} 
 		| NEQ	{
@@ -487,8 +596,16 @@ Term: 		Var {
 			CodeNode* node = new CodeNode;
                         std::string str = to_string($1);
 			node->name = str;
+ 			node->arr = false;
 			node->code = "";
 			$$ = node;
+		}
+		| SUB NUMBER {
+			CodeNode* node = new CodeNode;
+			string str = to_string($2);
+			node->name = "-" + str;
+			node->code += "-" + str + "\n";
+			$$ = node; 
 		}
 		| L_PAREN Expression R_PAREN {  
 			CodeNode* node = new CodeNode;
@@ -532,6 +649,7 @@ Var: 		Identifier {
 			}
 			CodeNode* node = new CodeNode;
 			node->name = $1->name;
+			node->arr = false;
 			node->code = "";
 			$$ = node;
 		}
@@ -540,6 +658,9 @@ Var: 		Identifier {
 			if(!find($1->name)){
                                 yyerror(str.c_str());
                         }
+			if($3->name[0] == '-'){
+				cerr << "Error. Array size cannot be less then 0\n";
+			}
 			CodeNode* node = new CodeNode;
 			node->name = $1->name + ", " + $3->name;
 			node->code += $3->code;
@@ -590,7 +711,7 @@ int yyerror(string msg) {
   extern int line;
   extern int col;
   extern char* yytext;
-  cerr << msg << "Error: On line " << line << ", column " << col << ": " << yytext << endl;
+  cerr << msg << "\nError: On line " << line << ", column " << col << ": " << yytext << endl;
   
     
 }
