@@ -13,7 +13,7 @@
    /* some common rules */
 DIGIT	[0-9]
 ALPHA	[a-zA-Z]
-NUMBER	{DIGIT}{DIGIT}*
+NUMBER	{SUB}?{DIGIT}{DIGIT}*
 colon	[:]
 equal	[=]
 ASSIGN	{colon}{equal}

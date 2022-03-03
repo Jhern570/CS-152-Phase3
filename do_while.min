@@ -1,0 +1,21 @@
+function main;
+beginparams
+endparams
+beginlocals
+
+i : integer;
+
+endlocals
+beginbody
+
+  i := 0;
+  do beginloop
+    i := i + 1;
+    if i == 5 then
+	break;
+    endif;
+    write i;
+  endloop 
+  while i < 10;
+
+endbody
