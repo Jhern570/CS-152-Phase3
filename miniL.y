@@ -312,8 +312,14 @@ Declarations: 	Identifier COLON INTEGER {
                                 string str = "Variable " + $1->name + " has already been declared\n";
                                 yyerror(str.c_str());
                            }
-			   if($5 < 0){
-                                cerr << "Error. Array size cannot be less then 0\n";
+			   if($5 <= 0){
+                                if($5 == 0){
+					cerr << "Error. Array size cannot be 0\n";
+				}
+				else{
+					cerr << "Error. Array size cannot be less then 0\n";
+				}
+				
                            }
                            addSymbol($1->name, Array);
 			   CodeNode* node = new CodeNode;
@@ -659,6 +665,7 @@ Var: 		Identifier {
                                 yyerror(str.c_str());
                         }
 			if($3->name[0] == '-'){
+				
 				cerr << "Error. Array size cannot be less then 0\n";
 			}
 			CodeNode* node = new CodeNode;
